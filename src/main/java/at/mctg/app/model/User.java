@@ -1,10 +1,18 @@
 package at.mctg.app.model;
 
 import com.fasterxml.jackson.annotation.JsonAlias;
-
+import lombok.AllArgsConstructor;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 import java.util.ArrayList;
 import java.util.List;
+
+@Getter
+@Setter
+@AllArgsConstructor
+@NoArgsConstructor
 
 public class User {
     @JsonAlias({"Username", "username"})
@@ -12,12 +20,25 @@ public class User {
     @JsonAlias({"Password", "password"})
     private String password;
 
+    private int id;
+    private String name;
+    private String bio;
+    private String image;
     private int coins;
     private int elo;
     private List<Card> stack;
     private List<Card> deck;
     //private Deck deck;
 
+    //Benötigt für das Filtern der User
+    public User(String username, String name, String bio, String image) {
+        setUsername(username);
+        setName(name);
+        setBio(bio);
+        setImage(image);
+    }
+
+    /*
     //Default-Konstruktor für Jackson
     public User() {}
 
@@ -29,7 +50,6 @@ public class User {
         this.stack = new ArrayList<>();
         this.deck = new ArrayList<>();
     }
-
     // Getter und Setter
     public String getUsername() {
         return username;
@@ -76,7 +96,7 @@ public class User {
     public void addCoins(int amount) {
         this.coins += amount;
     }
-
+    */
     // Methoden zur Verwaltung des Stacks
     public void addCardToStack(Card card) {
         this.stack.add(card);

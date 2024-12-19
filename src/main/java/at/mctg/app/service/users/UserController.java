@@ -1,5 +1,7 @@
 package at.mctg.app.service.users;
 
+import at.mctg.app.dal.UnitOfWork;
+import at.mctg.app.dal.repository.UserRepository;
 import at.mctg.app.service.users.UserDummyDAL;
 import at.mctg.httpserver.http.ContentType;
 import at.mctg.httpserver.http.HttpStatus;
@@ -10,7 +12,6 @@ import at.mctg.app.model.User;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonMappingException;
 
-import java.sql.SQLException;
 import java.util.Collection;
 import java.util.List;
 
@@ -25,153 +26,171 @@ public class UserController extends Controller {
 
     // PUT /users/ :username
     public Response updateUsers(Request request, String username) {
-        try {
-            User userData = this.userDAL.getUser(username);
-            User user = this.getObjectMapper().readValue(request.getBody(), User.class);
-            this.userDAL.removeUser(username);
-            this.userDAL.addUser(user);
-            System.out.println(userData);
-            // "[ { \"username\": \"John\", \"city\": \"1234\", {...} } ]"
-            String UserDataJSON = this.getObjectMapper().writeValueAsString(userData);
+        UnitOfWork unitOfWork = new UnitOfWork();
+        try (unitOfWork) {
+            String requestBody = request.getBody();
+            User userInput = this.getObjectMapper().readValue(requestBody, User.class);
 
-            return new Response(
-                    HttpStatus.OK,
-                    ContentType.JSON,
-                    UserDataJSON
-            );
+            // ID aus der URL übernehmen, da PUT meist ein bestimmtes Objekt updated
+            userInput.setUsername(username);
 
-        } catch (JsonProcessingException e) {
+            User updatedUser = new UserRepository(unitOfWork).update(userInput);
+            unitOfWork.commitTransaction();
+
+            if (updatedUser != null) {
+                String updatedUserJSON = this.getObjectMapper().writeValueAsString(updatedUser);
+                return new Response(
+                        HttpStatus.OK,
+                        ContentType.JSON,
+                        updatedUserJSON
+                );
+            } else {
+                return new Response(
+                        HttpStatus.NO_CONTENT,
+                        ContentType.JSON,
+                        "{ \"message\" : \"User not found\" }"
+                );
+            }
+
+        } catch (Exception e) {
             e.printStackTrace();
+            unitOfWork.rollbackTransaction();
             return new Response(
-                    HttpStatus.NOT_FOUND,
+                    HttpStatus.INTERNAL_SERVER_ERROR,
                     ContentType.JSON,
-                    "{ \"message\" : \"User not found\" }"
+                    "{ \"message\" : \"Internal Server Error\" }"
             );
         }
+
     }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
     // DELETE /users/ :username
     public Response deleteUser(String username) {
-
-        User userData = this.userDAL.getUser(username);
-
-        if (userData != null) {
-            this.userDAL.removeUser(username);
-
+        UnitOfWork unitOfWork = new UnitOfWork();
+        try (unitOfWork) {
+            new UserRepository(unitOfWork).delete(username);
+            unitOfWork.commitTransaction();
             return new Response(
                     HttpStatus.OK,
                     ContentType.JSON,
-                    "{ \"message\" : \"Deleted\" }"
+                    "{ message: \"Deleted\" }"
             );
+        } catch (Exception e) {
+            e.printStackTrace();
 
-        } else {
+            unitOfWork.rollbackTransaction();
             return new Response(
-                    HttpStatus.NOT_FOUND,
+                    HttpStatus.INTERNAL_SERVER_ERROR,
                     ContentType.JSON,
-                    "{ \"message\" : \"User not found\" }"
+                    "{ \"message\" : \"Internal Server Error\" }"
             );
         }
-
-        /*Für später, wenn wir die Datenbank einbinden!
-        return new Response(
-                HttpStatus.INTERNAL_SERVER_ERROR,
-                ContentType.JSON,
-                "{ \"message\" : \"Internal Server Error\" }"
-        );
-         */
     }
 
 
     // GET /users/:username
     public Response getUser(String username)
     {
-        try {
+        UnitOfWork unitOfWork = new UnitOfWork();
+        try (unitOfWork){
+            User userData = new UserRepository(unitOfWork).findByID(username);
 
-            User userData = this.userDAL.getUser(username);
-            // // "[ { \"username\": \"John\", \"password\": \"1234\", {...} } ]"
             String userDataJSON = this.getObjectMapper().writeValueAsString(userData);
 
-            return new Response(
-                    HttpStatus.OK,
-                    ContentType.JSON,
-                    userDataJSON
-            );
-        } catch (JsonProcessingException e) {
+            unitOfWork.commitTransaction();
+            if(userData != null) {
+                return new Response(
+                        HttpStatus.OK,
+                        ContentType.JSON,
+                        userDataJSON
+                );
+            } else {
+                return new Response(
+                        HttpStatus.NO_CONTENT,
+                        ContentType.JSON,
+                        "{ \"message\" : \"User with that username not found\" }"
+                );
+            }
+        } catch (Exception e) {
             e.printStackTrace();
-            return new Response(
-                    HttpStatus.NOT_FOUND,
-                    ContentType.JSON,
-                    "{ \"message\" : \"User not found\" }"
-            );
-        }
-    }
-    /*
-    // GET /users
-    public Response getUser() {
-        try {
 
-            //Wir hollen unsere Daten von der DataAccessLayer
-            List userData = this.userDAL.getUser();
-            // // "[ { \"username\": \"John\", \"password\": \"1234\", {...} } ]"
-            String UserDataJSON = this.getObjectMapper().writeValueAsString(userData);
-
-            return new Response(
-                    HttpStatus.OK,
-                    ContentType.JSON,
-                    UserDataJSON
-            );
-        } catch (JsonProcessingException | SQLException e) {
-            e.printStackTrace();
+            unitOfWork.rollbackTransaction();
             return new Response(
                     HttpStatus.INTERNAL_SERVER_ERROR,
                     ContentType.JSON,
                     "{ \"message\" : \"Internal Server Error\" }"
             );
-        } catch (InterruptedException e) {
-            throw new RuntimeException(e);
         }
     }
-    */
-    // POST /users
-    public Response registerUser(Request request) {
-        try {
 
+    // GET /users
+    public Response getUser() {
+        UnitOfWork unitOfWork = new UnitOfWork();
+        try (unitOfWork){
+            Collection<User> userData = new UserRepository(unitOfWork).findAll();
+
+            String userDataJSON = this.getObjectMapper().writeValueAsString(userData);
+            unitOfWork.commitTransaction();
+            return new Response(
+                    HttpStatus.OK,
+                    ContentType.JSON,
+                    userDataJSON
+            );
+        } catch (Exception e) {
+            e.printStackTrace();
+
+            unitOfWork.rollbackTransaction();
+            return new Response(
+                    HttpStatus.INTERNAL_SERVER_ERROR,
+                    ContentType.JSON,
+                    "{ \"message\" : \"Internal Server Error\" }"
+            );
+        }
+    }
+    // POST /users
+    /*
+    Man könnte auch die Funktion benutzen, ich möchte es lieber zuerst mit den gegebenen
+    Funktionalitäten versuchen
+    public boolean userExists(String username) {
+        try (PreparedStatement ps = unitOfWork.prepareStatement(
+                "SELECT COUNT(*) FROM users WHERE username = ?"
+        )) {
+            ps.setString(1, username);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    int count = rs.getInt(1);
+                    return count > 0;
+                }
+            }
+        } catch (SQLException e) {
+            throw new DataAccessException("User existence check failed", e);
+        }
+        return false;
+    }
+    */
+    public Response registerUser(Request request) {
+        UnitOfWork unitOfWork = new UnitOfWork();
+        try (unitOfWork){
             // request.getBody() => " { \"username\": \"John\", \"password\": \"1234\", {...}  }
-            User user = this.getObjectMapper().readValue(request.getBody(), User.class);
-            if(userDAL.getUser(user.getUsername()) != null) {
+            // JSON aus dem Request Body holen
+            String requestBody = request.getBody();
+            // JSON in User-Objekt umwandeln
+            User userInput = this.getObjectMapper().readValue(requestBody, User.class);
+            User userToCheck = new UserRepository(new UnitOfWork()).findByID(userInput.getUsername());
+            if(userInput.getUsername() != null || userInput.getUsername() != userToCheck.getUsername()) {
+                // Speichern über Repository
+                User savedUser = new UserRepository(unitOfWork).save(userInput);
+                unitOfWork.commitTransaction();
+
+                //Gespeichertes Objekt als JSON zurückgeben
+                String savedUserJSON = this.getObjectMapper().writeValueAsString(savedUser);
+                return new Response(
+                        HttpStatus.CREATED,
+                        ContentType.JSON,
+                        "{ message: \"User successfully created\" }"
+                );
+            }
+            else {
                 return new Response(
                         HttpStatus.CONFLICT,
                         ContentType.JSON,
@@ -179,18 +198,13 @@ public class UserController extends Controller {
                 );
             }
 
-            userDAL.addUser(user);
-            return new Response(
-                    HttpStatus.CREATED,
-                    ContentType.JSON,
-                    "{ message: \"User successfully created\" }"
-            );
-        } catch (JsonProcessingException e) {
+        } catch (Exception e) {
             e.printStackTrace();
+            unitOfWork.rollbackTransaction();
             return new Response(
-                    HttpStatus.BAD_REQUEST,
+                    HttpStatus.INTERNAL_SERVER_ERROR,
                     ContentType.JSON,
-                    "{ \"message\" : \"Invalid user data\" }"
+                    "{ \"message\" : \"Internal Server Error\" }"
             );
         }
     }
