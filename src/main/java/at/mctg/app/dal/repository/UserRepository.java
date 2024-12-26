@@ -1,41 +1,206 @@
 package at.mctg.app.dal.repository;
 
+import at.mctg.app.dal.DataAccessException;
 import at.mctg.app.dal.UnitOfWork;
+import at.mctg.app.dto.UserDTO;
 import at.mctg.app.model.User;
 
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+import java.util.UUID;
 
-public class UserRepository implements RepositoryInterface<Integer, User> {
+public class UserRepository implements RepositoryInterface<String, User> {
     private UnitOfWork unitOfWork;
 
     public UserRepository(UnitOfWork unitOfWork) {
         this.unitOfWork = unitOfWork;
     }
 
+    public UserDTO findByUsername(String username) {
+        try (PreparedStatement preparedStatement =
+                     this.unitOfWork.prepareStatement("""
+                    select * from person
+                    where username = ?
+                """))
+        {
+            //1 steht für das Fragezeichen(das Statement kann ja nach
+            //mehreren Parametern abfragen: z.B. where region = ? and country = ?
+            //preparedStatement.setString(1, "Europe");
+            preparedStatement.setString(1, username);
+
+            //preparedStatement.setDouble(2, 5.0);
+
+            ResultSet resultSet = preparedStatement.executeQuery();
+
+            UserDTO user = null;
+            while(resultSet.next())
+            {
+                user = new UserDTO(
+                        resultSet.getString(4),
+                        resultSet.getString(5),
+                        resultSet.getString(6));
+            }
+            return user;
+        } catch (SQLException e) {
+            throw new DataAccessException("Select nicht erfolgreich", e);
+        }
+    }
+
     @Override
-    public User findByID(Integer integer) {
-        return null;
+    public User findByID(String username) {
+        try (PreparedStatement preparedStatement =
+                     this.unitOfWork.prepareStatement("""
+                    select * from person
+                    where username = ?
+                """))
+        {
+            //1 steht für das Fragezeichen(das Statement kann ja nach
+            //mehreren Parametern abfragen: z.B. where region = ? and country = ?
+            //preparedStatement.setString(1, "Europe");
+            preparedStatement.setString(1, username);
+
+            //preparedStatement.setDouble(2, 5.0);
+
+            ResultSet resultSet = preparedStatement.executeQuery();
+
+            User user = null;
+            while(resultSet.next())
+            {
+                user = new User(
+                        resultSet.getString(2),
+                        resultSet.getString(4),
+                        resultSet.getString(5),
+                        resultSet.getString(6));
+            }
+            return user;
+        } catch (SQLException e) {
+            throw new DataAccessException("Select nicht erfolgreich", e);
+        }
     }
 
     @Override
     public Collection<User> findAll() {
-        return List.of();
+        try (PreparedStatement preparedStatement =
+                     this.unitOfWork.prepareStatement("""
+                    select * from person
+                    
+                """))
+        {
+            //1 steht für das Fragezeichen(das Statement kann ja nach
+            //mehreren Parametern abfragen: z.B. where region = ? and country = ?
+            // preparedStatement.setString(1, "Europe");
+            //preparedStatement.setInt();
+            //preparedStatement.setDouble(2, 5.0);
+
+            ResultSet resultSet = preparedStatement.executeQuery();
+            Collection<User> userRows = new ArrayList<>();
+            while(resultSet.next())
+            {
+                User user = new User(
+                        resultSet.getString(2),
+                        resultSet.getString(6),
+                        resultSet.getString(7),
+                        resultSet.getString(8));
+                userRows.add(user);
+            }
+            return userRows;
+        } catch (SQLException e) {
+            throw new DataAccessException("Select nicht erfolgreich", e);
+        }
     }
 
     @Override
     public User save(User object) {
-        return null;
+
+        try (PreparedStatement preparedStatement =
+                     this.unitOfWork.prepareStatement("""
+                INSERT INTO person (id, username, password)
+                VALUES (?, ?, ?)
+                RETURNING id;
+            """))
+        {
+            preparedStatement.setObject(1, UUID.randomUUID());
+            preparedStatement.setString(2, object.getUsername());
+            preparedStatement.setString(3, object.getPassword());
+
+            ResultSet rs = preparedStatement.executeQuery();
+            if (rs.next()) {
+                UUID generatedId = UUID.fromString(rs.getString(1));
+                object.setId(generatedId);
+            }
+
+            return object;
+        } catch (SQLException e) {
+            throw new DataAccessException("Insert operation failed", e);
+        }
     }
 
     @Override
-    public User delete(Integer integer) {
+    public User delete(String name) {
+        try (PreparedStatement preparedStatement =
+                     this.unitOfWork.prepareStatement("""
+                DELETE FROM person
+                WHERE username = ?
+            """))
+        {
+            preparedStatement.setString(2, name);
+
+            int rowsAffected = preparedStatement.executeUpdate();
+
+            if (rowsAffected > 0) {
+                System.out.println("Record with username " + name + " was deleted successfully.");
+            } else {
+                System.out.println("No record found with username " + name + ".");
+            }
+
+        } catch (SQLException e) {
+            throw new DataAccessException("Delete operation failed", e);
+        }
         return null;
     }
 
     @Override
     public User update(User object) {
-        return null;
+        // Wir machen hier ein Update nach username. Falls es den Eintrag nicht gibt,
+        // soll entweder nichts passieren oder null zurückgegeben werden.
+        try (PreparedStatement preparedStatement =
+                     this.unitOfWork.prepareStatement("""
+                UPDATE person
+                SET name = ?, bio = ?, image = ?
+                WHERE username = ?
+                RETURNING username, name, bio, image;
+            """))
+        {
+
+            preparedStatement.setString(6, object.getName());
+            preparedStatement.setString(7, object.getBio());
+            preparedStatement.setString(8, object.getImage());
+            preparedStatement.setString(2, object.getUsername());
+
+            ResultSet rs = preparedStatement.executeQuery();
+
+            // Wenn das Update erfolgreich war, sollte ein Datensatz zurückkommen.
+            if (rs.next()) {
+                // Aktualisiertes Objekt auslesen (zurückgeben)
+                User updatedUser = new User(
+                        rs.getString("username"),
+                        rs.getString("name"),
+                        rs.getString("bio"),
+                        rs.getString("image")
+                );
+                return updatedUser;
+            } else {
+                // Keine Zeilen gefunden -> kein Update durchgeführt
+                return null;
+            }
+
+        } catch (SQLException e) {
+            throw new DataAccessException("Update operation failed", e);
+        }
     }
 }
 

@@ -11,9 +11,9 @@ public enum DatabaseManager {
     {
         try {
             return DriverManager.getConnection(
-                    "jdbc:postgresql://localhost:5432/weatherdb",
-                    "weatherdb",
-                    "weatherdb");
+                    "jdbc:postgresql://localhost:5432/mydb",
+                    "postgres",
+                    "postgres");
         } catch (SQLException e) {
             throw new DataAccessException("Datenbankverbindungsaufbau nicht erfolgreich", e);
         }

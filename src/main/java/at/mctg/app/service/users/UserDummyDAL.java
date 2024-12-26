@@ -53,4 +53,5 @@ public class UserDummyDAL {
     public void removeUser(String username) {
         userData.removeIf(user -> user.getUsername().equals(username));
     }
+
 }
