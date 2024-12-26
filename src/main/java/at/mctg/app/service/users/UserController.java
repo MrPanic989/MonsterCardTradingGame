@@ -1,7 +1,9 @@
 package at.mctg.app.service.users;
 
 import at.mctg.app.dal.UnitOfWork;
+import at.mctg.app.dal.repository.RepositoryInterface;
 import at.mctg.app.dal.repository.UserRepository;
+import at.mctg.app.dto.UserDTO;
 import at.mctg.app.service.users.UserDummyDAL;
 import at.mctg.httpserver.http.ContentType;
 import at.mctg.httpserver.http.HttpStatus;
@@ -17,6 +19,9 @@ import java.util.List;
 
 public class UserController extends Controller {
     private UserDummyDAL userDAL;
+
+    //For later: refactor the code to get it to use the interface
+    //private RepositoryInterface repository = new UserRepository(new UnitOfWork());
 
     public UserController() {
 
@@ -93,7 +98,7 @@ public class UserController extends Controller {
     {
         UnitOfWork unitOfWork = new UnitOfWork();
         try (unitOfWork){
-            User userData = new UserRepository(unitOfWork).findByID(username);
+            UserDTO userData = new UserRepository(unitOfWork).findByUsername(username);
 
             String userDataJSON = this.getObjectMapper().writeValueAsString(userData);
 
@@ -176,8 +181,9 @@ public class UserController extends Controller {
             String requestBody = request.getBody();
             // JSON in User-Objekt umwandeln
             User userInput = this.getObjectMapper().readValue(requestBody, User.class);
+            System.out.println("userInput: " + userInput.toString());
             User userToCheck = new UserRepository(new UnitOfWork()).findByID(userInput.getUsername());
-            if(userInput.getUsername() != null || userInput.getUsername() != userToCheck.getUsername()) {
+            if(userInput.getUsername() != null && userToCheck == null) {
                 // Speichern über Repository
                 User savedUser = new UserRepository(unitOfWork).save(userInput);
                 unitOfWork.commitTransaction();

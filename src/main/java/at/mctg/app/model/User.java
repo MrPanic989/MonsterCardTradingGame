@@ -1,16 +1,15 @@
 package at.mctg.app.model;
 
 import com.fasterxml.jackson.annotation.JsonAlias;
-import lombok.AllArgsConstructor;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
+import lombok.*;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 
 @Getter
 @Setter
+@ToString
 @AllArgsConstructor
 @NoArgsConstructor
 
@@ -20,7 +19,7 @@ public class User {
     @JsonAlias({"Password", "password"})
     private String password;
 
-    private int id;
+    private UUID id;
     private String name;
     private String bio;
     private String image;
@@ -36,6 +35,10 @@ public class User {
         setName(name);
         setBio(bio);
         setImage(image);
+    }
+    public User(String username, String password) {
+        setUsername(username);
+        setPassword(password);
     }
 
     /*

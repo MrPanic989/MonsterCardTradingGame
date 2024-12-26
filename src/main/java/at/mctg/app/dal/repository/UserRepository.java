@@ -2,6 +2,7 @@ package at.mctg.app.dal.repository;
 
 import at.mctg.app.dal.DataAccessException;
 import at.mctg.app.dal.UnitOfWork;
+import at.mctg.app.dto.UserDTO;
 import at.mctg.app.model.User;
 
 import java.sql.PreparedStatement;
@@ -10,6 +11,7 @@ import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+import java.util.UUID;
 
 public class UserRepository implements RepositoryInterface<String, User> {
     private UnitOfWork unitOfWork;
@@ -18,18 +20,48 @@ public class UserRepository implements RepositoryInterface<String, User> {
         this.unitOfWork = unitOfWork;
     }
 
-    @Override
-    public User findByID(String name) {
+    public UserDTO findByUsername(String username) {
         try (PreparedStatement preparedStatement =
                      this.unitOfWork.prepareStatement("""
                     select * from person
-                    where id = ?
+                    where username = ?
                 """))
         {
             //1 steht für das Fragezeichen(das Statement kann ja nach
             //mehreren Parametern abfragen: z.B. where region = ? and country = ?
             //preparedStatement.setString(1, "Europe");
-            preparedStatement.setString(1, name);
+            preparedStatement.setString(1, username);
+
+            //preparedStatement.setDouble(2, 5.0);
+
+            ResultSet resultSet = preparedStatement.executeQuery();
+
+            UserDTO user = null;
+            while(resultSet.next())
+            {
+                user = new UserDTO(
+                        resultSet.getString(4),
+                        resultSet.getString(5),
+                        resultSet.getString(6));
+            }
+            return user;
+        } catch (SQLException e) {
+            throw new DataAccessException("Select nicht erfolgreich", e);
+        }
+    }
+
+    @Override
+    public User findByID(String username) {
+        try (PreparedStatement preparedStatement =
+                     this.unitOfWork.prepareStatement("""
+                    select * from person
+                    where username = ?
+                """))
+        {
+            //1 steht für das Fragezeichen(das Statement kann ja nach
+            //mehreren Parametern abfragen: z.B. where region = ? and country = ?
+            //preparedStatement.setString(1, "Europe");
+            preparedStatement.setString(1, username);
 
             //preparedStatement.setDouble(2, 5.0);
 
@@ -83,20 +115,21 @@ public class UserRepository implements RepositoryInterface<String, User> {
 
     @Override
     public User save(User object) {
-        // Nur region, city, temperature sind hier relevant.
+
         try (PreparedStatement preparedStatement =
                      this.unitOfWork.prepareStatement("""
-                INSERT INTO person (username, password)
-                VALUES (?, ?)
+                INSERT INTO person (id, username, password)
+                VALUES (?, ?, ?)
                 RETURNING id;
             """))
         {
-            preparedStatement.setString(1, object.getUsername());
-            preparedStatement.setString(2, object.getPassword());
+            preparedStatement.setObject(1, UUID.randomUUID());
+            preparedStatement.setString(2, object.getUsername());
+            preparedStatement.setString(3, object.getPassword());
 
             ResultSet rs = preparedStatement.executeQuery();
             if (rs.next()) {
-                int generatedId = rs.getInt(1);
+                UUID generatedId = UUID.fromString(rs.getString(1));
                 object.setId(generatedId);
             }
 
