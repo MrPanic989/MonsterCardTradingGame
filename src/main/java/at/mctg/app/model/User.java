@@ -1,127 +1,90 @@
 package at.mctg.app.model;
 
-import com.fasterxml.jackson.annotation.JsonAlias;
 import lombok.*;
+import com.fasterxml.jackson.annotation.JsonAlias;
 
-import java.util.ArrayList;
-import java.util.List;
 import java.util.UUID;
 
+/**
+ * Represents a player/user in the system.
+ * Maps to the "person" table in the DB.
+ */
 @Getter
 @Setter
 @ToString
-@AllArgsConstructor
 @NoArgsConstructor
-
+@AllArgsConstructor
 public class User {
+
+    /**
+     * The primary key in the DB: "id" (UUID).
+     * In DB: person.id
+     */
+    private UUID id;
+
+    /**
+     * The user's unique name in the system.
+     * In DB: person.username
+     */
     @JsonAlias({"Username", "username"})
     private String username;
+
+    /**
+     * The user's password.
+     * In DB: person.password
+     */
     @JsonAlias({"Password", "password"})
     private String password;
 
-    private UUID id;
+    /**
+     * The authentication token, e.g. "kienboec-mtcgToken"
+     * In DB: person.authtoken
+     */
+    private String authtoken;
+
+    /**
+     * Indicates if user is admin.
+     * In DB: person.admin
+     */
+    private boolean admin;
+
+    /**
+     * Profile fields: name, bio, image
+     * In DB: person.name, person.bio, person.image
+     */
+    @JsonAlias({"Name", "name"})
     private String name;
+    @JsonAlias({"Bio", "bio"})
     private String bio;
+    @JsonAlias({"Image", "image"})
     private String image;
-    private int coins;
-    private int elo;
-    private List<Card> stack;
-    private List<Card> deck;
-    //private Deck deck;
 
-    //Benötigt für das Filtern der User
-    public User(String username, String name, String bio, String image) {
-        setUsername(username);
-        setName(name);
-        setBio(bio);
-        setImage(image);
-    }
-    public User(String username, String password) {
-        setUsername(username);
-        setPassword(password);
-    }
+    /**
+     * The user's current coins (starts with 20).
+     * In DB: person.coins
+     */
+    private int coins = 20;
 
-    /*
-    //Default-Konstruktor für Jackson
-    public User() {}
+    /**
+     * The user's current ELO (starts with 100).
+     * In DB: person.elo
+     */
+    @JsonAlias({"Elo", "elo"})
+    private int elo = 100;
 
-    public User(String username, String password) {
-        this.username = username;
-        this.password = password;
-        this.coins = 20; // Jeder Benutzer startet mit 20 Münzen
-        this.elo = 100;  // Start-ELO
-        this.stack = new ArrayList<>();
-        this.deck = new ArrayList<>();
-    }
-    // Getter und Setter
-    public String getUsername() {
-        return username;
-    }
+    /**
+     * The total number of games played.
+     * In DB: person.gamesplayed
+     */
+    private int gamesPlayed;
 
-    public void setUsername(String username) {
-        this.username = username;
-    }
-
-    public String getPassword() {
-        return password;
-    }
-
-    public void setPassword(String password) {
-        this.password = password;
-    }
-
-    public int getCoins() {
-        return coins;
-    }
-
-
-    public int getElo() {
-        return elo;
-    }
-
-    public void setElo(int elo) {
-        this.elo = elo;
-    }
-
-    public List<Card> getStack() {
-        return stack;
-    }
-
-    public List<Card> getDeck() {
-        return deck;
-    }
-
-    // Methoden zur Verwaltung der Coins
-    public void reduceCoins(int amount) {
-        this.coins -= amount;
-    }
-
-    public void addCoins(int amount) {
-        this.coins += amount;
-    }
-    */
-    // Methoden zur Verwaltung des Stacks
-    public void addCardToStack(Card card) {
-        this.stack.add(card);
-    }
-
-    public void removeCardFromStack(Card card) {
-        this.stack.remove(card);
-    }
-
-    // Methoden zur Verwaltung des Decks
-    public boolean addCardToDeck(Card card) {
-        if (this.deck.size() < 4) {
-            this.deck.add(card);
-            return true;
-        } else {
-            // Deck ist voll
-            return false;
-        }
-    }
-
-    public void removeCardFromDeck(Card card) {
-        this.deck.remove(card);
-    }
+    /**
+     * Number of wins and losses.
+     * In DB: person.wins, person.losses
+     */
+    @JsonAlias({"Wins", "wins"})
+    private int wins;
+    @JsonAlias({"Loses", "loses"})
+    private int losses;
 
 }

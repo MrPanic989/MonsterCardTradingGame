@@ -147,7 +147,7 @@ public class UserRepository implements RepositoryInterface<String, User> {
                 WHERE username = ?
             """))
         {
-            preparedStatement.setString(2, name);
+            preparedStatement.setString(1, name);
 
             int rowsAffected = preparedStatement.executeUpdate();
 
@@ -176,10 +176,10 @@ public class UserRepository implements RepositoryInterface<String, User> {
             """))
         {
 
-            preparedStatement.setString(6, object.getName());
-            preparedStatement.setString(7, object.getBio());
-            preparedStatement.setString(8, object.getImage());
-            preparedStatement.setString(2, object.getUsername());
+            preparedStatement.setString(1, object.getName());
+            preparedStatement.setString(2, object.getBio());
+            preparedStatement.setString(3, object.getImage());
+            preparedStatement.setString(4, object.getUsername());
 
             ResultSet rs = preparedStatement.executeQuery();
 
