@@ -14,9 +14,9 @@ public class UserDummyDAL {
     private static  List<User> userData = new ArrayList<>();
 
     public UserDummyDAL() {
-            userData.add(new User("Marc", "1234"));
-            userData.add(new User("John", "1234"));
-            userData.add(new User("Jane", "1234"));
+            //userData.add(new User("Marc", "1234"));
+            //userData.add(new User("John", "1234"));
+            //userData.add(new User("Jane", "1234"));
     }
 
     // GET /users/:username

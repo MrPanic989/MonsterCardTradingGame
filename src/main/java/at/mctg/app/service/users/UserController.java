@@ -4,7 +4,6 @@ import at.mctg.app.dal.UnitOfWork;
 import at.mctg.app.dal.repository.RepositoryInterface;
 import at.mctg.app.dal.repository.UserRepository;
 import at.mctg.app.dto.UserDTO;
-import at.mctg.app.service.users.UserDummyDAL;
 import at.mctg.httpserver.http.ContentType;
 import at.mctg.httpserver.http.HttpStatus;
 import at.mctg.httpserver.server.Request;
@@ -14,19 +13,16 @@ import at.mctg.app.model.User;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonMappingException;
 
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 
 public class UserController extends Controller {
-    private UserDummyDAL userDAL;
-
     //For later: refactor the code to get it to use the interface
     //private RepositoryInterface repository = new UserRepository(new UnitOfWork());
 
     public UserController() {
-
-        // Nur noch für die Dummy-JUnit-Tests notwendig. Stattdessen ein RepositoryPattern verwenden.
-        this.userDAL = new UserDummyDAL();
+        super();
     }
 
     // PUT /users/ :username
@@ -92,18 +88,23 @@ public class UserController extends Controller {
         }
     }
 
-
     // GET /users/:username
     public Response getUser(String username)
     {
         UnitOfWork unitOfWork = new UnitOfWork();
         try (unitOfWork){
-            UserDTO userData = new UserRepository(unitOfWork).findByUsername(username);
-
-            String userDataJSON = this.getObjectMapper().writeValueAsString(userData);
+            User userData = new UserRepository(unitOfWork).findByID(username);
 
             unitOfWork.commitTransaction();
+
             if(userData != null) {
+                //Convert full User to UserDTO
+                UserDTO dto = new UserDTO(
+                        userData.getName(),
+                        userData.getBio(),
+                        userData.getImage()
+                );
+                String userDataJSON = this.getObjectMapper().writeValueAsString(dto);
                 return new Response(
                         HttpStatus.OK,
                         ContentType.JSON,
@@ -111,7 +112,7 @@ public class UserController extends Controller {
                 );
             } else {
                 return new Response(
-                        HttpStatus.NO_CONTENT,
+                        HttpStatus.NOT_FOUND,
                         ContentType.JSON,
                         "{ \"message\" : \"User with that username not found\" }"
                 );
@@ -129,13 +130,20 @@ public class UserController extends Controller {
     }
 
     // GET /users
+    // Array of {"Name", "Bio", "Image" } dto objects for all users
     public Response getUser() {
         UnitOfWork unitOfWork = new UnitOfWork();
         try (unitOfWork){
             Collection<User> userData = new UserRepository(unitOfWork).findAll();
-
-            String userDataJSON = this.getObjectMapper().writeValueAsString(userData);
             unitOfWork.commitTransaction();
+
+            //Mapping of each full User to UserDTO
+            List<UserDTO> userDTOList = new ArrayList<UserDTO>();
+            for (User user : userData) {
+                userDTOList.add(new UserDTO(user.getName(), user.getBio(), user.getImage()));
+            }
+            String userDataJSON = this.getObjectMapper().writeValueAsString(userDTOList);
+
             return new Response(
                     HttpStatus.OK,
                     ContentType.JSON,
