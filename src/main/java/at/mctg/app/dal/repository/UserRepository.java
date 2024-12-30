@@ -2,7 +2,6 @@ package at.mctg.app.dal.repository;
 
 import at.mctg.app.dal.DataAccessException;
 import at.mctg.app.dal.UnitOfWork;
-import at.mctg.app.dto.UserDTO;
 import at.mctg.app.model.User;
 
 import java.sql.PreparedStatement;
@@ -10,14 +9,31 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.List;
 import java.util.UUID;
 
-public class UserRepository implements RepositoryInterface<String, User> {
+public class UserRepository {
     private final UnitOfWork unitOfWork;
 
     public UserRepository(UnitOfWork unitOfWork) {
         this.unitOfWork = unitOfWork;
+    }
+
+    public User findByAuthToken(String token) {
+        try (PreparedStatement preparedStatement =
+                     this.unitOfWork.prepareStatement("""
+                    select * from person
+                    where authtoken = ?
+                """))
+        {
+            preparedStatement.setString(1, token);
+            ResultSet rs = preparedStatement.executeQuery();
+            if (rs.next()) {
+                return mapResultSetToUser(rs);
+            }
+            return null;
+        } catch (SQLException e) {
+            throw new DataAccessException("Select by token failed", e);
+        }
     }
 
     private User mapResultSetToUser(ResultSet rs) throws SQLException {
@@ -68,8 +84,8 @@ public class UserRepository implements RepositoryInterface<String, User> {
         }
     }
     */
-    @Override
-    public User findByID(String username) {
+
+    public User findUserByUsername(String username) {
         try (PreparedStatement preparedStatement =
                      this.unitOfWork.prepareStatement("""
                     select * from person
@@ -106,8 +122,7 @@ public class UserRepository implements RepositoryInterface<String, User> {
         }
     }
 
-    @Override
-    public Collection<User> findAll() {
+    public Collection<User> findAllUsers() {
         try (PreparedStatement preparedStatement =
                      this.unitOfWork.prepareStatement("""
                     select * from person
@@ -143,8 +158,7 @@ public class UserRepository implements RepositoryInterface<String, User> {
         }
     }
 
-    @Override
-    public User save(User object) {
+    public User insertUser(User object) {
 
         try (PreparedStatement preparedStatement =
                      this.unitOfWork.prepareStatement("""
@@ -158,7 +172,11 @@ public class UserRepository implements RepositoryInterface<String, User> {
             preparedStatement.setString(2, object.getUsername());
             preparedStatement.setString(3, object.getPassword());
             preparedStatement.setString(4, object.getAuthtoken());
-            preparedStatement.setBoolean(5, object.isAdmin());
+            if(object.getUsername().equals("admin")) {
+                preparedStatement.setBoolean(5, true);
+            } else {
+                preparedStatement.setBoolean(5, object.isAdmin());
+            }
             preparedStatement.setString(6, object.getName());
             preparedStatement.setString(7, object.getBio());
             preparedStatement.setString(8, object.getImage());
@@ -184,8 +202,7 @@ public class UserRepository implements RepositoryInterface<String, User> {
         }
     }
 
-    @Override
-    public User delete(String name) {
+    public User deleteUser(String name) {
         try (PreparedStatement preparedStatement =
                      this.unitOfWork.prepareStatement("""
                 DELETE FROM person
@@ -208,8 +225,7 @@ public class UserRepository implements RepositoryInterface<String, User> {
 
     }
 
-    @Override
-    public User update(User object) {
+    public User updateUser(User object) {
         // Wir machen hier ein Update nach username. Falls es den Eintrag nicht gibt,
         // soll entweder nichts passieren oder null zurückgegeben werden.
         try (PreparedStatement preparedStatement =

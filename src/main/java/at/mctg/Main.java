@@ -27,15 +27,15 @@ public class Main {
     {
         Router router = new Router();
 
-        router.addService("/users", new UserService());
-        router.addService("/sessions", new SessionService());
-        router.addService("/packages", new PackageService());
-        router.addService("/transactions/packages", new TransactionService());
-        router.addService("/cards", new CardService());
-        router.addService("/deck", new CardService());
-        router.addService("/stats", new GameService());
-        router.addService("/scoreboard", new GameService());
-        router.addService("/battles", new GameService());
+        router.addService("/users", new UserService());         // Register, GET user, update user
+        router.addService("/sessions", new SessionService());   // POST /sessions => login
+        router.addService("/packages", new PackageService());   // Admin: create packages
+        router.addService("/transactions/packages", new TransactionService()); // buy packages
+        router.addService("/cards", new CardService());         // GET /cards => list all user's cards
+        //router.addService("/deck", new DeckService());          // GET /deck, PUT /deck
+        //router.addService("/stats", new StatsService());        // GET /stats
+        //router.addService("/scoreboard", new StatsService());   // GET /scoreboard
+        //router.addService("/battles", new BattleService());     // POST /battles
         router.addService("/tradings", new TradeService());
 
         return router;
