@@ -20,7 +20,13 @@ public class Request {
             return null;
         }
 
-        return '/' + this.pathParts.get(0);
+        if (this.pathParts.size() == 1) {
+            // nur ein Segment, z.B. "/users" oder "/deck"
+            return "/" + this.pathParts.get(0);
+        } else {
+            // mindestens 2 Segmente, z.B. ["transactions","packages"] => "/transactions/packages"
+            return "/" + this.pathParts.get(0) + "/" + this.pathParts.get(1);
+        }
     }
 
     public String getUrlContent(){

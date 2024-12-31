@@ -1,7 +1,6 @@
 package at.mctg.app.service.users;
 
 import at.mctg.app.dal.UnitOfWork;
-import at.mctg.app.dal.repository.RepositoryInterface;
 import at.mctg.app.dal.repository.UserRepository;
 import at.mctg.app.dto.UserDTO;
 import at.mctg.httpserver.http.ContentType;
@@ -10,8 +9,6 @@ import at.mctg.httpserver.server.Request;
 import at.mctg.httpserver.server.Response;
 import at.mctg.app.controller.Controller;
 import at.mctg.app.model.User;
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.JsonMappingException;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -22,7 +19,7 @@ public class UserController extends Controller {
     //private RepositoryInterface repository = new UserRepository(new UnitOfWork());
 
     public UserController() {
-        super();
+        super(); // calls Controller's constructor -> sets objectMapper
     }
 
     // PUT /users/ :username
@@ -35,7 +32,7 @@ public class UserController extends Controller {
             // ID aus der URL übernehmen, da PUT meist ein bestimmtes Objekt updated
             userInput.setUsername(username);
 
-            User updatedUser = new UserRepository(unitOfWork).update(userInput);
+            User updatedUser = new UserRepository(unitOfWork).updateUser(userInput);
             unitOfWork.commitTransaction();
 
             if (updatedUser != null) {
@@ -69,7 +66,7 @@ public class UserController extends Controller {
     public Response deleteUser(String username) {
         UnitOfWork unitOfWork = new UnitOfWork();
         try (unitOfWork) {
-            new UserRepository(unitOfWork).delete(username);
+            new UserRepository(unitOfWork).deleteUser(username);
             unitOfWork.commitTransaction();
             return new Response(
                     HttpStatus.OK,
@@ -93,7 +90,7 @@ public class UserController extends Controller {
     {
         UnitOfWork unitOfWork = new UnitOfWork();
         try (unitOfWork){
-            User userData = new UserRepository(unitOfWork).findByID(username);
+            User userData = new UserRepository(unitOfWork).findUserByUsername(username);
 
             unitOfWork.commitTransaction();
 
@@ -134,7 +131,7 @@ public class UserController extends Controller {
     public Response getUser() {
         UnitOfWork unitOfWork = new UnitOfWork();
         try (unitOfWork){
-            Collection<User> userData = new UserRepository(unitOfWork).findAll();
+            Collection<User> userData = new UserRepository(unitOfWork).findAllUsers();
             unitOfWork.commitTransaction();
 
             //Mapping of each full User to UserDTO
@@ -189,11 +186,10 @@ public class UserController extends Controller {
             String requestBody = request.getBody();
             // JSON in User-Objekt umwandeln
             User userInput = this.getObjectMapper().readValue(requestBody, User.class);
-            System.out.println("userInput: " + userInput.toString());
-            User userToCheck = new UserRepository(new UnitOfWork()).findByID(userInput.getUsername());
+            User userToCheck = new UserRepository(new UnitOfWork()).findUserByUsername(userInput.getUsername());
             if(userInput.getUsername() != null && userToCheck == null) {
                 // Speichern über Repository
-                User savedUser = new UserRepository(unitOfWork).save(userInput);
+                User savedUser = new UserRepository(unitOfWork).insertUser(userInput);
                 unitOfWork.commitTransaction();
 
                 //Gespeichertes Objekt als JSON zurückgeben
