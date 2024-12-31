@@ -30,15 +30,15 @@ public class PackageController extends Controller {
     public Response createPackage(Request request) {
         // Only admin user can create packages => check token => check if user.admin == true.
         // Check Authorization header => Bearer <token>
-        String token = request.getHeaderMap().getHeader("Authorization");
-        if (token == null || !token.startsWith("Bearer ")) {
+        String authHeader = request.getHeaderMap().getHeader("Authorization");
+        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
             return new Response(
                     HttpStatus.UNAUTHORIZED,
                     ContentType.JSON,
                     "{ \"message\" : \"Missing or invalid token\" }"
             );
         }
-        String realToken = token.substring("Bearer ".length()); // e.g. "admin-mtcgToken"
+        String realToken = authHeader.substring("Bearer ".length()); // e.g. "admin-mtcgToken"
 
         UnitOfWork unitOfWork = new UnitOfWork();
         try (unitOfWork) {

@@ -74,6 +74,26 @@ public class CardRepository {
             throw new DataAccessException("Select nicht erfolgreich", e);
         }
     }
+    //Returns all cards from a package
+    public Collection<Card> findCardsByPackageId(UUID packageId) {
+        try (PreparedStatement preparedStatement =
+                     this.unitOfWork.prepareStatement("""
+                    select * from cards
+                    where package_id = ?
+                """))
+        {
+            preparedStatement.setObject(1, packageId);
+
+            ResultSet resultSet = preparedStatement.executeQuery();
+            Collection<Card> cardRows = new ArrayList<>();
+            while (resultSet.next()) {
+                cardRows.add(mapResultSetToCard(resultSet));
+            }
+            return cardRows;
+        } catch (SQLException e) {
+            throw new DataAccessException("Select (findCardsByPackageId) failed", e);
+        }
+    }
 
 
     public void insertCard(Card object) {

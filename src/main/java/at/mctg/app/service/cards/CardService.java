@@ -1,6 +1,5 @@
 package at.mctg.app.service.cards;
 
-import at.mctg.app.service.cards.CardController;
 import at.mctg.httpserver.http.ContentType;
 import at.mctg.httpserver.http.HttpStatus;
 import at.mctg.httpserver.http.Method;
@@ -17,16 +16,12 @@ public class CardService implements Service {
 
     @Override
     public Response handleRequest(Request request) {
-
+        System.out.println("HANDLE REQUEST: ");
+        System.out.println("TEST:" + request.getMethod());
+        System.out.println("TEST:" + request.getPathname());
         if (request.getMethod() == Method.GET &&
                 request.getPathname().equals("/cards")) {
             return cardController.getUserCards(request);
-        } else if (request.getMethod() == Method.GET &&
-                request.getPathname().equals("/deck")) {
-            return cardController.getUserDeck(request);
-        } else if (request.getMethod() == Method.PUT &&
-                request.getPathname().equals("/deck")) {
-            return cardController.configureUserDeck(request);
         }
 
         return new Response(
