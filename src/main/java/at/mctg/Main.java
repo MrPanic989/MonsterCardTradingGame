@@ -1,5 +1,6 @@
 package at.mctg;
 
+import at.mctg.app.service.battle.BattleService;
 import at.mctg.app.service.cards.CardService;
 import at.mctg.app.service.deck.DeckService;
 import at.mctg.app.service.packages.PackageService;
@@ -36,7 +37,7 @@ public class Main {
         router.addService("/deck", new DeckService());          // GET /deck, PUT /deck
         router.addService("/stats", new StatsService());        // GET /stats
         router.addService("/scoreboard", new StatsService());   // GET /scoreboard
-        //router.addService("/battles", new BattleService());     // POST /battles
+        router.addService("/battles", new BattleService());     // POST /battles
         router.addService("/tradings", new TradeService());
 
         return router;

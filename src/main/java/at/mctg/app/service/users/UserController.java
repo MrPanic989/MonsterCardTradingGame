@@ -26,13 +26,58 @@ public class UserController extends Controller {
     public Response updateUsers(Request request, String username) {
         UnitOfWork unitOfWork = new UnitOfWork();
         try (unitOfWork) {
+            // Token
+            String authHeader = request.getHeaderMap().getHeader("Authorization");
+            if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+                return new Response(
+                        HttpStatus.UNAUTHORIZED,
+                        ContentType.JSON,
+                        "{ \"message\" : \"Missing or invalid token\" }"
+                );
+            }
+            String token = authHeader.substring("Bearer ".length());
+
+            // CurrentUser
+            User currentUser = new UserRepository(unitOfWork).findByAuthToken(token);
+            if (currentUser == null) {
+                return new Response(
+                        HttpStatus.UNAUTHORIZED,
+                        ContentType.JSON,
+                        "{ \"message\" : \"Token not assigned to any user\" }"
+                );
+            }
+
+            // Check for admin or correct user
+            if (!currentUser.isAdmin() &&
+                    !currentUser.getUsername().equals(username))
+            {
+                return new Response(
+                        HttpStatus.FORBIDDEN,
+                        ContentType.JSON,
+                        "{ \"message\" : \"You cannot update someone else's data\" }"
+                );
+            }
+
+            //If everything is ok:
+            //Retrive existing User via username
+            User existingUser = new UserRepository(unitOfWork).findUserByUsername(username);
+            if (existingUser == null) {
+                return new Response(
+                        HttpStatus.NOT_FOUND,
+                        ContentType.JSON,
+                        "{ \"message\" : \"User not found\" }"
+                );
+            }
+            // Overwrite just the fields "Name", "Bio", "Image"
+            // everything else from the currentUser stays the same
             String requestBody = request.getBody();
-            User userInput = this.getObjectMapper().readValue(requestBody, User.class);
+            User tempUser = this.getObjectMapper().readValue(requestBody, User.class);
 
-            // ID aus der URL übernehmen, da PUT meist ein bestimmtes Objekt updated
-            userInput.setUsername(username);
+            existingUser.setName(tempUser.getName());
+            existingUser.setBio(tempUser.getBio());
+            existingUser.setImage(tempUser.getImage());
 
-            User updatedUser = new UserRepository(unitOfWork).updateUser(userInput);
+            User updatedUser = new UserRepository(unitOfWork).updateUser(existingUser);
             unitOfWork.commitTransaction();
 
             if (updatedUser != null) {
@@ -86,11 +131,41 @@ public class UserController extends Controller {
     }
 
     // GET /users/:username
-    public Response getUser(String username)
+    public Response getUser(Request request, String username)
     {
         UnitOfWork unitOfWork = new UnitOfWork();
         try (unitOfWork){
-            User userData = new UserRepository(unitOfWork).findUserByUsername(username);
+            //Get token through header
+            String authHeader = request.getHeaderMap().getHeader("Authorization");
+            if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+                return new Response(
+                        HttpStatus.UNAUTHORIZED,
+                        ContentType.JSON,
+                        "{ \"message\" : \"Missing or invalid token\" }"
+                );
+            }
+            String token = authHeader.substring("Bearer ".length());
+
+            //Extract the curren user
+            User userData = new UserRepository(unitOfWork).findByAuthToken(token);
+            if (userData == null) {
+                return new Response(
+                        HttpStatus.UNAUTHORIZED,
+                        ContentType.JSON,
+                        "{ \"message\" : \"Token not assigned to any user\" }"
+                );
+            }
+
+            //Check if admin or correct user
+            if (!userData.isAdmin() &&
+                    !userData.getUsername().equals(username))
+            {
+                return new Response(
+                        HttpStatus.FORBIDDEN,
+                        ContentType.JSON,
+                        "{ \"message\" : \"You are not allowed to see this user's data\" }"
+                );
+            }
 
             unitOfWork.commitTransaction();
 

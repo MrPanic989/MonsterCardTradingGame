@@ -33,8 +33,6 @@ public class TradeDeal {
     @JsonAlias({"Type", "type"})
     private String requiredCardType;
 
-    private String requiredElement;
-
     /**
      * The minimum damage required from the offered card.
      */

@@ -32,6 +32,35 @@ public class CardRepository {
         return card;
     }
 
+    //Helper method that automatically sets elementType and cardType
+    //if they are null or empty, based on the card's name.
+    private void parseElementAndType(Card card) {
+
+        if (card.getElementType() != null && !card.getElementType().isEmpty()
+                && card.getCardType()   != null && !card.getCardType().isEmpty()) {
+            // do nothing
+            return;
+        }
+
+        // name -> z.B. "WaterGoblin", "FireSpell" etc.
+        String nameLow = card.getName().toLowerCase();
+
+        if (nameLow.contains("water")) {
+            card.setElementType("water");
+        } else if (nameLow.contains("fire")) {
+            card.setElementType("fire");
+        } else if (nameLow.contains("regular")) {
+            card.setElementType("normal");
+        } else {
+            card.setElementType("normal");
+        }
+
+        if (nameLow.contains("spell")) {
+            card.setCardType("spell");
+        } else {
+            card.setCardType("monster");
+        }
+    }
 
     public Card findByID(UUID uuid) {
         try (PreparedStatement preparedStatement =
@@ -97,6 +126,9 @@ public class CardRepository {
 
 
     public void insertCard(Card object) {
+        // Parse element_type and card_type automatically, if not set
+        parseElementAndType(object);
+
         try (PreparedStatement preparedStatement =
                      this.unitOfWork.prepareStatement("""
                 INSERT INTO cards (card_id, name, damage, element_type, card_type, owner, package_id)
