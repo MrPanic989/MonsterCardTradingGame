@@ -147,6 +147,41 @@ public class BattleController extends Controller {
         return baseDamage;
     }
 
+    //This is a helper Method for the Unique Feature
+    // potential card level-up and increase in strength
+    private void incrementUsageAndMaybeLevelUp(
+            Card card,
+            Map<UUID, Integer> usageMap,
+            StringBuilder log,
+            UnitOfWork unitOfWork
+    ) {
+        UUID cardId = card.getCardId();
+        int oldCount = usageMap.getOrDefault(cardId, 0);
+        int newCount = oldCount + 1;
+        usageMap.put(cardId, newCount);
+
+        // check if newCount is multiple of 5
+        if (newCount % 5 == 0) {
+            double oldDamage = card.getDamage();
+            int oldLevel = card.getLevel();
+
+            double newDamage = oldDamage * 1.2;
+            int newLevel = oldLevel + 1;
+
+            card.setDamage(newDamage);
+            card.setLevel(newLevel);
+
+            log.append("Card ").append(card.getName())
+                    .append(" used ").append(newCount)
+                    .append(" times => damage boosted by 20%! Now: ")
+                    .append(newDamage).append(", level=")
+                    .append(newLevel).append("\n");
+
+            // store changes permanently => immediate effect
+            new CardRepository(unitOfWork).updateCard(card);
+        }
+    }
+
     // The core Logic of the whole Project in terms of battel:
     //Up to 100 rounds
     // each round pick random card from each deck
@@ -162,7 +197,8 @@ public class BattleController extends Controller {
             User opponent,
             List<Card> deckChallenger,
             List<Card> deckOpponent,
-            StringBuilder log)
+            StringBuilder log,
+            UnitOfWork unitOfWork)
     {
         // The fight last for 100 rounds max
         final int MAX_ROUNDS = 100;
@@ -170,6 +206,9 @@ public class BattleController extends Controller {
 
         // random generator for picking a card
         Random rand = new Random();
+
+        // usageMap: how many times a given card has been used in this match
+        Map<UUID, Integer> usageMap = new HashMap<>();
 
         while (currentRound <= MAX_ROUNDS) {
 
@@ -193,8 +232,19 @@ public class BattleController extends Controller {
             Card cardChallanger = deckChallenger.get(rand.nextInt(deckChallenger.size()));
             Card cardOpponent = deckOpponent.get(rand.nextInt(deckOpponent.size()));
 
-            log.append(challenger.getUsername()).append(" plays [").append(cardChallanger.getName()).append(" / ").append(cardChallanger.getDamage()).append("]\n");
-            log.append(opponent.getUsername()).append(" plays [").append(cardOpponent.getName()).append(" / ").append(cardOpponent.getDamage()).append("]\n");
+            log.append(challenger.getUsername())
+                    .append(" plays [").append(cardChallanger.getName())
+                    .append(" / ").append(cardChallanger.getDamage())
+                    .append(", lvl=").append(cardChallanger.getLevel()).append("]\n");
+
+            log.append(opponent.getUsername())
+                    .append(" plays [").append(cardOpponent.getName())
+                    .append(" / ").append(cardOpponent.getDamage())
+                    .append(", lvl=").append(cardOpponent.getLevel()).append("]\n");
+
+            //Increment usage for both cards and check if the card can level-up
+            incrementUsageAndMaybeLevelUp(cardChallanger, usageMap, log, unitOfWork);
+            incrementUsageAndMaybeLevelUp(cardOpponent, usageMap, log, unitOfWork);
 
             double firstDamage = computeDamage(cardChallanger, cardOpponent); // cardChallanger's effective damage vs cardOpponent
             double secondDamage = computeDamage(cardOpponent, cardChallanger); // cardOpponent's effective damage vs cardChallanger
@@ -210,11 +260,22 @@ public class BattleController extends Controller {
                 log.append(" => ").append(challenger.getUsername()).append(" wins this round!\n");
                 deckOpponent.remove(cardOpponent);
                 deckChallenger.add(cardOpponent); // move cardOpponent to challenger's deck
+
+                // usageMap reset for cardOpponent because new owner => usage=0
+                usageMap.put(cardOpponent.getCardId(), 0);
+
+                log.append("Card ").append(cardOpponent.getName())
+                        .append(" is now owned by the challenger!\n");
             } else {
                 // cardOpponent wins => opponent gets cardChallanger
                 log.append(" => ").append(opponent.getUsername()).append(" wins this round!\n");
                 deckChallenger.remove(cardChallanger);
                 deckOpponent.add(cardChallanger);
+
+                usageMap.put(cardChallanger.getCardId(), 0);
+
+                log.append("Card ").append(cardChallanger.getName())
+                        .append(" is now owned by the opponent!\n");
             }
 
             currentRound++;
@@ -294,7 +355,7 @@ public class BattleController extends Controller {
                 battleLog.append(challenger.getUsername()).append(" VS ").append(opponent.getUsername()).append("\n");
 
                 String result = letsBattle(challenger, opponent,
-                        deckChallenger, deckOpponent, battleLog);
+                        deckChallenger, deckOpponent, battleLog, unitOfWork);
 
                 // store final stats
                 // ELO, Wins, Losses might have changed

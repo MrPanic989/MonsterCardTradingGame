@@ -55,6 +55,7 @@ CREATE TABLE IF NOT EXISTS cards (
      card_id       UUID PRIMARY KEY,
      name          VARCHAR(100) NOT NULL,
      damage        FLOAT        NOT NULL,
+     level         INT          DEFAULT 0,
      element_type  VARCHAR(50), -- WATER, FIRE, NORMAL
      card_type     VARCHAR(50), -- MONSTER, SPELL oder "special"
      owner         VARCHAR(25), -- Aktuell besitzender User (FK auf person.username)
