@@ -22,7 +22,7 @@ public class UserService implements Service {
         System.out.println("TEST:" + request.getPathname());
         if (request.getMethod() == Method.GET &&
                 request.getPathParts().size() > 1) {
-            return this.userController.getUser(request.getPathParts().get(1));
+            return this.userController.getUser(request, request.getPathParts().get(1));
         } else if (request.getMethod() == Method.GET) {
             return this.userController.getUser();
         } else if (request.getMethod() == Method.POST &&

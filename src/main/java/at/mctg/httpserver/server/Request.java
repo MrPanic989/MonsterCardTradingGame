@@ -20,13 +20,32 @@ public class Request {
             return null;
         }
 
+        // nur ein Segment, z.B. "/users" oder "/deck"
         if (this.pathParts.size() == 1) {
-            // nur ein Segment, z.B. "/users" oder "/deck"
             return "/" + this.pathParts.get(0);
-        } else {
-            // mindestens 2 Segmente, z.B. ["transactions","packages"] => "/transactions/packages"
-            return "/" + this.pathParts.get(0) + "/" + this.pathParts.get(1);
         }
+
+        //Wenn es zwei oder mehr Segmente sind:
+        String first = this.pathParts.get(0); // z.B. "transactions"
+        String second = this.pathParts.size() >= 2 ? this.pathParts.get(1) : null;
+
+        // 2 Segmente, z.B. ["transactions","packages"] => "/transactions/packages"
+        if ("transactions".equals(first) && "packages".equals(second)) {
+            return "/transactions/packages";
+        }
+
+        // /tradings/:tradingId => nur "/tradings" als Service-Route zurückgeben
+        if ("tradings".equals(first)) {
+           return "/tradings";
+        }
+
+        // /users/:usernam => nur "/users" als Service-Route zurückgebe
+        if ("users".equals(first)) {
+            return "/users";
+        }
+
+        // falls wir wirklich /something/else brauchen
+        return "/" + first + "/" + second;
     }
 
     public String getUrlContent(){

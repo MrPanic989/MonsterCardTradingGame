@@ -89,7 +89,6 @@ CREATE TABLE IF NOT EXISTS trades (
       trade_id         UUID PRIMARY KEY,
       card_id          UUID NOT NULL,       -- Karte, die angeboten wird
       required_type    VARCHAR(50),         -- "monster" oder "spell"
-      required_element VARCHAR(50),         -- z.B. "FIRE", "WATER", "NORMAL" (wenn du das brauchst)
       required_damage  FLOAT,
       username         VARCHAR(25),         -- Wem gehört das Angebot?
       CONSTRAINT fk_trades_card
