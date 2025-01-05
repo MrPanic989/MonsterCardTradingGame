@@ -134,7 +134,7 @@ public class BattleController extends Controller {
 
                     // check if someone has 0 cards
                     if (deckChallenger.isEmpty()) {
-                        battleLog.append("Challenger has no cards left => Opponent wins!\n");
+                        battleLog.append("Challenger has no cards left => Opponent wins!\n\n");
                         // challenger lost
                         logic.applyElo(challenger, opponent, false);
                         result = "opponent";
@@ -142,7 +142,7 @@ public class BattleController extends Controller {
                         break;
                     }
                     if (deckOpponent.isEmpty()) {
-                        battleLog.append("Opponent has no cards left => Challenger wins!\n");
+                        battleLog.append("Opponent has no cards left => Challenger wins!\n\n");
                         // challenger wins
                         logic.applyElo(challenger, opponent, true);
                         result =  "challenger";
@@ -223,7 +223,11 @@ public class BattleController extends Controller {
                 }
 
                 // if we exit the while => 100 rounds done => draw
-                battleLog.append("\n=== 100 Rounds => BATTLE DRAW! ===\n");
+                if (result.equals("draw"))
+                {
+                    battleLog.append("\n=== 100 Rounds => BATTLE DRAW! ===\n\n");
+
+                }
 
                 //After the fight is over, we have to update the ownership and level of the cards
                 CardRepository cardR = new CardRepository(unitOfWork);
