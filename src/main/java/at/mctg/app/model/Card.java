@@ -60,4 +60,7 @@ public class Card {
      * In DB: cards.package_id (UUID)
      */
     private UUID packageId;
+
+    //For the Unique Feature
+    private int level;
 }

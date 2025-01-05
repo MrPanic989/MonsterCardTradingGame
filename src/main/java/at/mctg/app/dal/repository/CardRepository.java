@@ -25,10 +25,12 @@ public class CardRepository {
         card.setCardId((UUID) rs.getObject("card_id"));
         card.setName(rs.getString("name"));
         card.setDamage(rs.getDouble("damage"));
+        card.setLevel(rs.getInt("level"));
         card.setElementType(rs.getString("element_type"));
         card.setCardType(rs.getString("card_type"));
         card.setOwnerUsername(rs.getString("owner"));
         card.setPackageId((UUID) rs.getObject("package_id"));
+
         return card;
     }
 
@@ -153,17 +155,18 @@ public class CardRepository {
         try (PreparedStatement preparedStatement =
                      this.unitOfWork.prepareStatement("""
                 UPDATE cards
-                SET name = ?, damage = ?, element_type = ?, card_type = ?, owner = ?, package_id = ?
+                SET name = ?, damage = ?, level = ?, element_type = ?, card_type = ?, owner = ?, package_id = ?
                 WHERE card_id = ?
             """))
         {
             preparedStatement.setString(1, object.getName());
             preparedStatement.setDouble(2, object.getDamage());
-            preparedStatement.setString(3, object.getElementType());
-            preparedStatement.setString(4, object.getCardType());
-            preparedStatement.setString(5, object.getOwnerUsername());
-            preparedStatement.setObject(6, object.getPackageId());
-            preparedStatement.setObject(7, object.getCardId());
+            preparedStatement.setInt(3, object.getLevel());
+            preparedStatement.setString(4, object.getElementType());
+            preparedStatement.setString(5, object.getCardType());
+            preparedStatement.setString(6, object.getOwnerUsername());
+            preparedStatement.setObject(7, object.getPackageId());
+            preparedStatement.setObject(8, object.getCardId());
 
             preparedStatement.executeUpdate();
 
