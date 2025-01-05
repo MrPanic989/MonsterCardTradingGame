@@ -1,24 +1,6 @@
 -- ACHTUNG: Datenbank anlegen kann man separat machen, falls nötig:
 -- CREATE DATABASE mydb;
 
---DROP TABLE IF EXISTS "person";
-
---CREATE TABLE IF NOT EXISTS "person"(
---    id UUID UNIQUE PRIMARY KEY not null ,
---    username varchar(25) UNIQUE not null ,
---    password varchar(55) not null ,
---    authtoken varchar(55),
---    admin boolean,
---    name varchar(25),
---    bio varchar(25),
---    image varchar(25)
---);
-
---INSERT INTO "person" (ID, USERNAME, PASSWORD) VALUES (gen_random_uuid(), 'test', 'test');
-
-
---SELECT * FROM "person";
-
 -- 1) Bestehende Tabellen löschen
 DROP TABLE IF EXISTS battles CASCADE;
 DROP TABLE IF EXISTS trades CASCADE;
@@ -63,7 +45,7 @@ CREATE TABLE IF NOT EXISTS cards (
      CONSTRAINT fk_cards_owner
          FOREIGN KEY (owner)
              REFERENCES person (username)
-             ON DELETE SET NULL,    -- Kann man bei Bedarf anpassen (CASCADE oder RESTRICT)
+             ON DELETE SET NULL,
      CONSTRAINT fk_cards_package
          FOREIGN KEY (package_id)
              REFERENCES packages (package_id)
@@ -112,7 +94,7 @@ CREATE TABLE IF NOT EXISTS battles (
    CONSTRAINT fk_battles_challenger
        FOREIGN KEY (challenger)
            REFERENCES person (username)
-           ON DELETE SET NULL,   -- oder CASCADE, je nach Bedarf
+           ON DELETE SET NULL,
    CONSTRAINT fk_battles_opponent
        FOREIGN KEY (opponent)
            REFERENCES person (username)

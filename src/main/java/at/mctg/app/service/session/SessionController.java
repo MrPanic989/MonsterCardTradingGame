@@ -19,7 +19,6 @@ public class SessionController extends Controller {
      // Expects JSON: { "Username": "...", "Password": "..." }
      // If valid, returns 200 and { "token": "...-mtcgToken" }
      // else 401
-
     public Response loginUser(Request request) {
             UnitOfWork unitOfWork = new UnitOfWork();
         try (unitOfWork) {

@@ -26,7 +26,6 @@ public class PackageController extends Controller {
     //POST /packages
     //Expects JSON array of 5 Card objects:
     //[{ "Id":"...", "Name":"...", "Damage": ...}, {...}, ...]
-
     public Response createPackage(Request request) {
         // Only admin user can create packages => check token => check if user.admin == true.
         // Check Authorization header => Bearer <token>
