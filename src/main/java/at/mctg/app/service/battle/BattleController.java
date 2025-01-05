@@ -15,6 +15,7 @@ import at.mctg.httpserver.server.Response;
 
 import java.util.*;
 
+//communication with DB
 public class BattleController extends Controller {
 
     public BattleController() {
@@ -22,6 +23,11 @@ public class BattleController extends Controller {
     }
     private static User userInTheLoby = null;
 
+    //for the "pure" logic
+    private final BattleLogic logic = new BattleLogic();
+
+
+    //Helper for loadich Cards from DB by their ID
     private List<Card> loadCards(Collection<UUID> cardIds, UnitOfWork uow) throws Exception {
         List<Card> deck = new ArrayList<>();
 
@@ -34,155 +40,8 @@ public class BattleController extends Controller {
         return deck;
     }
 
-    private void applyElo(User challenger, User opponent, boolean challengerWon) {
-        if (challengerWon) {
-            challenger.setElo(challenger.getElo() + 3);
-            opponent.setElo(opponent.getElo() - 5);
-            challenger.setWins(challenger.getWins() + 1);
-            opponent.setLosses(opponent.getLosses() + 1);
-        } else {
-            // opponent won
-            opponent.setElo(opponent.getElo() + 3);
-            challenger.setElo(challenger.getElo() - 5);
-            opponent.setWins(opponent.getWins() + 1);
-            challenger.setLosses(challenger.getLosses() + 1);
-        }
-    }
-
-    private double computeDamage(Card attacker, Card defender) {
-        // Check special combos that set damage to 0 or cause instant defeat (from the specs)
-
-        String attackersName = attacker.getName().toLowerCase();
-        String defendersName = defender.getName().toLowerCase();
-        final double youCannotTouchMe = 0.0;
-
-        // "Goblins are too afraid of Dragons to attack " => Goblin does 0 damage
-        if (attackersName.contains("goblin") && defendersName.contains("dragon")) {
-            return youCannotTouchMe;
-        }
-
-        // "Wizzard can control Orks so they are not able to damage them" => Ork does 0 damage
-        if (attackersName.contains("ork") && defendersName.contains("wizzard")) {
-            return youCannotTouchMe;
-        }
-
-        // "The armor of Knights is so heavy that WaterSpells make them drown instantly."
-        // => Knight instantly loses
-        if (attackersName.contains("knight") && defendersName.contains("waterspell")) {
-            return youCannotTouchMe; // "drown instantly"
-        }
-
-        // "The Kraken is immune against spells" => if attacker is Spell vs. defender is "kraken" => 0
-        if (attacker.getCardType() != null && attacker.getCardType().toLowerCase().contains("spell")
-                && defendersName.contains("kraken")) {
-            return youCannotTouchMe;
-        }
-
-        // "The FireElves know Dragons since they were little and can evade their attacks."
-        if (attackersName.contains("dragon") && defendersName.contains("fireelf")) {
-            return youCannotTouchMe;
-        }
-
-
-        double baseDamage = attacker.getDamage();
-
-        // It it is a pure monster fight, no element effect is added, so the
-        // base Damage of the attacking Card is returned
-        boolean attackerIsSpell = (attacker.getCardType() != null
-                && attacker.getCardType().toLowerCase().contains("spell"));
-        boolean defenderIsSpell = (defender.getCardType() != null
-                && defender.getCardType().toLowerCase().contains("spell"));
-
-        if (!attackerIsSpell && !defenderIsSpell) {
-            return baseDamage;
-        }
-
-        // If at least one Card is spell, the following  advantage logic is added:
-        // water -> fire => x2
-        // fire -> normal => x2
-        // normal -> water => x2
-        // if not effective => x0.5
-        // else normal => same
-
-        String attackingElement =
-                (attacker.getElementType() != null)
-                        ? attacker.getElementType().toLowerCase() : "";
-
-        String defindingElement =
-                (defender.getElementType() != null)
-                        ? defender.getElementType().toLowerCase() : "";
-
-        // water -> fire => attacker *2
-        if (attackingElement.equals("water") && defindingElement.equals("fire")) {
-            return baseDamage * 2;
-        }
-
-        // fire -> normal => attacker *2
-        if (attackingElement.equals("fire") && defindingElement.equals("normal")) {
-            return baseDamage * 2;
-        }
-
-        // normal -> water => attacker *2
-        if (attackingElement.equals("normal") && defindingElement.equals("water")) {
-            return baseDamage * 2;
-        }
-
-        // not effective => half damage => (the inverse pairs)
-        // fire -> water => attacker *0.5
-        if (attackingElement.equals("fire") && defindingElement.equals("water")) {
-            return baseDamage * 0.5;
-        }
-
-        // normal -> fire => attacker *0.5
-        if (attackingElement.equals("normal") && defindingElement.equals("fire")) {
-            return baseDamage * 0.5;
-        }
-
-        // water -> normal => attacker *0.5
-        if (attackingElement.equals("water") && defindingElement.equals("normal")) {
-            return baseDamage * 0.5;
-        }
-
-        // else no effect => baseDamage
-        return baseDamage;
-    }
-
-    //This is a helper Method for the Unique Feature
-    // potential card level-up and increase in strength
-    private void incrementUsageAndMaybeLevelUp(
-            Card card,
-            Map<UUID, Integer> usageMap,
-            StringBuilder log,
-            UnitOfWork unitOfWork
-    ) {
-        UUID cardId = card.getCardId();
-        int oldCount = usageMap.getOrDefault(cardId, 0);
-        int newCount = oldCount + 1;
-        usageMap.put(cardId, newCount);
-
-        // check if newCount is multiple of 5
-        if (newCount % 5 == 0) {
-            double oldDamage = card.getDamage();
-            int oldLevel = card.getLevel();
-
-            double newDamage = oldDamage * 1.2;
-            int newLevel = oldLevel + 1;
-
-            card.setDamage(newDamage);
-            card.setLevel(newLevel);
-
-            log.append("Card ").append(card.getName())
-                    .append(" used ").append(newCount)
-                    .append(" times => damage boosted by 20%! Now: ")
-                    .append(newDamage).append(", level=")
-                    .append(newLevel).append("\n");
-
-            // store changes permanently => immediate effect
-            new CardRepository(unitOfWork).updateCard(card);
-        }
-    }
-
-    // The core Logic of the whole Project in terms of battel:
+    // POST /battles
+    // The core Class of the whole Project in terms of battel:
     //Up to 100 rounds
     // each round pick random card from each deck
     //if monster vs. monster => normal damage
@@ -192,102 +51,6 @@ public class BattleController extends Controller {
     //if one deck becomes empty => that user lost
     //or if 100 rounds => draw
     //ELO: +3 for winner, -5 for loser, no change if draw
-    private String letsBattle(
-            User challenger,
-            User opponent,
-            List<Card> deckChallenger,
-            List<Card> deckOpponent,
-            StringBuilder log,
-            UnitOfWork unitOfWork)
-    {
-        // The fight last for 100 rounds max
-        final int MAX_ROUNDS = 100;
-        int currentRound = 1;
-
-        // random generator for picking a card
-        Random rand = new Random();
-
-        // usageMap: how many times a given card has been used in this match
-        Map<UUID, Integer> usageMap = new HashMap<>();
-
-        while (currentRound <= MAX_ROUNDS) {
-
-            // check if someone has 0 cards
-            if (deckChallenger.isEmpty()) {
-                log.append("Challenger has no cards left => Opponent wins!\n");
-                // challenger lost
-                applyElo(challenger, opponent, false);
-                return "opponent";
-            }
-            if (deckOpponent.isEmpty()) {
-                log.append("Opponent has no cards left => Challenger wins!\n");
-                // challenger wins
-                applyElo(challenger, opponent, true);
-                return "challenger";
-            }
-
-            //Start new round
-            log.append("\n--- Round ").append(currentRound).append(" ---\n");
-            // pick random card from each deck
-            Card cardChallanger = deckChallenger.get(rand.nextInt(deckChallenger.size()));
-            Card cardOpponent = deckOpponent.get(rand.nextInt(deckOpponent.size()));
-
-            log.append(challenger.getUsername())
-                    .append(" plays [").append(cardChallanger.getName())
-                    .append(" / ").append(cardChallanger.getDamage())
-                    .append(", lvl=").append(cardChallanger.getLevel()).append("]\n");
-
-            log.append(opponent.getUsername())
-                    .append(" plays [").append(cardOpponent.getName())
-                    .append(" / ").append(cardOpponent.getDamage())
-                    .append(", lvl=").append(cardOpponent.getLevel()).append("]\n");
-
-            //Increment usage for both cards and check if the card can level-up
-            incrementUsageAndMaybeLevelUp(cardChallanger, usageMap, log, unitOfWork);
-            incrementUsageAndMaybeLevelUp(cardOpponent, usageMap, log, unitOfWork);
-
-            double firstDamage = computeDamage(cardChallanger, cardOpponent); // cardChallanger's effective damage vs cardOpponent
-            double secondDamage = computeDamage(cardOpponent, cardChallanger); // cardOpponent's effective damage vs cardChallanger
-
-            log.append(" => ").append(cardChallanger.getName()).append(" deals ").append(firstDamage).append(" vs. ")
-                    .append(cardOpponent.getName()).append(" deals ").append(secondDamage).append("\n");
-
-            if (Math.abs(firstDamage - secondDamage) < 0.0001) {
-                // draw => no cards move
-                log.append(" => Round is a DRAW!\n");
-            } else if (firstDamage > secondDamage) {
-                // cardChallanger wins => challenger gets cardOpponent
-                log.append(" => ").append(challenger.getUsername()).append(" wins this round!\n");
-                deckOpponent.remove(cardOpponent);
-                deckChallenger.add(cardOpponent); // move cardOpponent to challenger's deck
-
-                // usageMap reset for cardOpponent because new owner => usage=0
-                usageMap.put(cardOpponent.getCardId(), 0);
-
-                log.append("Card ").append(cardOpponent.getName())
-                        .append(" is now owned by the challenger!\n");
-            } else {
-                // cardOpponent wins => opponent gets cardChallanger
-                log.append(" => ").append(opponent.getUsername()).append(" wins this round!\n");
-                deckChallenger.remove(cardChallanger);
-                deckOpponent.add(cardChallanger);
-
-                usageMap.put(cardChallanger.getCardId(), 0);
-
-                log.append("Card ").append(cardChallanger.getName())
-                        .append(" is now owned by the opponent!\n");
-            }
-
-            currentRound++;
-        }
-
-        // if we exit the while => 100 rounds done => draw
-        log.append("\n=== 100 Rounds => BATTLE DRAW! ===\n");
-        // ELO no change
-        return "draw";
-    }
-
-    // POST /battles
     public Response startBattle(Request request) {
 
         String authHeader = request.getHeaderMap().getHeader("Authorization");
@@ -354,8 +117,122 @@ public class BattleController extends Controller {
                 battleLog.append("=== Battle Start ===\n");
                 battleLog.append(challenger.getUsername()).append(" VS ").append(opponent.getUsername()).append("\n");
 
-                String result = letsBattle(challenger, opponent,
-                        deckChallenger, deckOpponent, battleLog, unitOfWork);
+
+                // The fight last for 100 rounds max
+                final int MAX_ROUNDS = 100;
+                int currentRound = 1;
+                String result = "draw";
+
+                // random generator for picking a card
+                Random rand = new Random();
+
+                // usageMap: how many times a given card has been used in this match
+                Map<UUID, Integer> usageMap = new HashMap<>();
+
+                boolean fightIsOver = false;
+                while (currentRound <= MAX_ROUNDS && !fightIsOver) {
+
+                    // check if someone has 0 cards
+                    if (deckChallenger.isEmpty()) {
+                        battleLog.append("Challenger has no cards left => Opponent wins!\n");
+                        // challenger lost
+                        logic.applyElo(challenger, opponent, false);
+                        result = "opponent";
+                        fightIsOver = true;
+                        break;
+                    }
+                    if (deckOpponent.isEmpty()) {
+                        battleLog.append("Opponent has no cards left => Challenger wins!\n");
+                        // challenger wins
+                        logic.applyElo(challenger, opponent, true);
+                        result =  "challenger";
+                        fightIsOver = true;
+                        break;
+                    }
+
+                    //Start new round
+                    battleLog.append("\n--- Round ").append(currentRound).append(" ---\n");
+                    // pick random card from each deck
+                    Card cardChallanger = deckChallenger.get(rand.nextInt(deckChallenger.size()));
+                    Card cardOpponent = deckOpponent.get(rand.nextInt(deckOpponent.size()));
+
+                    battleLog.append(challenger.getUsername())
+                            .append(" plays [").append(cardChallanger.getName())
+                            .append(" / ").append(cardChallanger.getDamage())
+                            .append(", lvl=").append(cardChallanger.getLevel()).append("]\n");
+
+                    battleLog.append(opponent.getUsername())
+                            .append(" plays [").append(cardOpponent.getName())
+                            .append(" / ").append(cardOpponent.getDamage())
+                            .append(", lvl=").append(cardOpponent.getLevel()).append("]\n");
+
+                    //Increment usage for both cards and check if the card can level-up
+                    boolean leveledChallanger = logic.incrementUsageAndMaybeLevelUp(cardChallanger, usageMap);
+                    if (leveledChallanger) {
+                        battleLog.append("Card ").append(cardChallanger.getName())
+                                .append(" has been used ").append(usageMap.get(cardChallanger.getCardId()))
+                                .append(" times => damage boosted by 20%! Now: ")
+                                .append(cardChallanger.getDamage()).append(", level=")
+                                .append(cardChallanger.getLevel()).append("\n");
+                    }
+                    boolean leveledOpponent = logic.incrementUsageAndMaybeLevelUp(cardOpponent, usageMap);
+                    if (leveledOpponent) {
+                        battleLog.append("Card ").append(cardOpponent.getName())
+                                .append(" has been used ").append(usageMap.get(cardOpponent.getCardId()))
+                                .append(" times => damage boosted by 20%! Now: ")
+                                .append(cardOpponent.getDamage()).append(", level=")
+                                .append(cardOpponent.getLevel()).append("\n");
+                    }
+
+                    //get damage done
+                    // cardChallanger's effective damage vs cardOpponent
+                    double firstDamage = logic.computeDamage(cardChallanger, cardOpponent);
+                    // cardOpponent's effective damage vs cardChallanger
+                    double secondDamage = logic.computeDamage(cardOpponent, cardChallanger);
+
+                    battleLog.append(" => ").append(cardChallanger.getName()).append(" deals ").append(firstDamage).append(" vs. ")
+                            .append(cardOpponent.getName()).append(" deals ").append(secondDamage).append("\n");
+
+                    if (Math.abs(firstDamage - secondDamage) < 0.0001) {
+                        // draw => no cards move
+                        battleLog.append(" => Round is a DRAW!\n");
+                    } else if (firstDamage > secondDamage) {
+                        // cardChallanger wins => challenger gets cardOpponent
+                        battleLog.append(" => ").append(challenger.getUsername()).append(" wins this round!\n");
+                        deckOpponent.remove(cardOpponent);
+                        deckChallenger.add(cardOpponent); // move cardOpponent to challenger's deck
+
+                        // usageMap reset count for cardOpponent because new owner => usage=0
+                        usageMap.put(cardOpponent.getCardId(), 0);
+
+                        battleLog.append("Card ").append(cardOpponent.getName())
+                                .append(" is now owned by the challenger!\n");
+                    } else {
+                        // cardOpponent wins => opponent gets cardChallanger
+                        battleLog.append(" => ").append(opponent.getUsername()).append(" wins this round!\n");
+                        deckChallenger.remove(cardChallanger);
+                        deckOpponent.add(cardChallanger);
+
+                        usageMap.put(cardChallanger.getCardId(), 0);
+
+                        battleLog.append("Card ").append(cardChallanger.getName())
+                                .append(" is now owned by the opponent!\n");
+                    }
+
+                    currentRound++;
+                }
+
+                // if we exit the while => 100 rounds done => draw
+                battleLog.append("\n=== 100 Rounds => BATTLE DRAW! ===\n");
+
+                //After the fight is over, we have to update the ownership and level of the cards
+                CardRepository cardR = new CardRepository(unitOfWork);
+                for (Card card : deckChallenger) {
+                    cardR.updateCard(card);
+                }
+                for (Card card : deckOpponent) {
+                    cardR.updateCard(card);
+                }
 
                 // store final stats
                 // ELO, Wins, Losses might have changed
