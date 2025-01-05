@@ -35,8 +35,8 @@ public class PackageRepository {
     public CardPackage findById(UUID packageId) {
         try (PreparedStatement preparedStatement =
                      this.unitOfWork.prepareStatement("""
-                    select * from packages
-                    where package_id = ?
+                    SELECT * FROM packages
+                    WHERE package_id = ?
                 """))
         {
             preparedStatement.setObject(1, packageId);
@@ -73,8 +73,8 @@ public class PackageRepository {
     public CardPackage findAnyUnpurchasedPackage() {
         try (PreparedStatement preparedStatement =
                      this.unitOfWork.prepareStatement("""
-                    select package_id, purchased from packages
-                    where purchased = false
+                    SELECT package_id, purchased FROM packages
+                    WHERE purchased = false
                     LIMIT 1
                 """))
         {

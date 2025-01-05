@@ -22,8 +22,8 @@ public class DeckRepository {
     public Collection<UUID> getDeckByUser(String username) {
         try (PreparedStatement preparedStatement =
                      this.unitOfWork.prepareStatement("""
-                    select card_id from deck
-                    where username = ?
+                    SELECT card_id FROM deck
+                    WHERE username = ?
                 """))
         {
             preparedStatement.setString(1, username);

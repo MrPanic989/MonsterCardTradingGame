@@ -67,8 +67,8 @@ public class CardRepository {
     public Card findByID(UUID uuid) {
         try (PreparedStatement preparedStatement =
                      this.unitOfWork.prepareStatement("""
-                    select * from cards
-                    where card_id = ?
+                    SELECT * FROM cards
+                    WHERE card_id = ?
                 """))
         {
             preparedStatement.setObject(1, uuid);
@@ -88,8 +88,8 @@ public class CardRepository {
     public Collection<Card> findCardsByOwner(String ownerUsername) {
         try (PreparedStatement preparedStatement =
                      this.unitOfWork.prepareStatement("""
-                    select * from cards
-                    where owner = ?
+                    SELECT * FROM cards
+                    WHERE owner = ?
                 """))
         {
             preparedStatement.setString(1, ownerUsername);
@@ -109,8 +109,8 @@ public class CardRepository {
     public Collection<Card> findCardsByPackageId(UUID packageId) {
         try (PreparedStatement preparedStatement =
                      this.unitOfWork.prepareStatement("""
-                    select * from cards
-                    where package_id = ?
+                    SELECT * FROM cards
+                    WHERE package_id = ?
                 """))
         {
             preparedStatement.setObject(1, packageId);

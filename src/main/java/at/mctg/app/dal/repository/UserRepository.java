@@ -21,8 +21,8 @@ public class UserRepository {
     public User findByAuthToken(String token) {
         try (PreparedStatement preparedStatement =
                      this.unitOfWork.prepareStatement("""
-                    select * from person
-                    where authtoken = ?
+                    SELECT * FROM person
+                    WHERE authtoken = ?
                 """))
         {
             preparedStatement.setString(1, token);
@@ -36,6 +36,7 @@ public class UserRepository {
         }
     }
 
+    //A helper method for mapping
     private User mapResultSetToUser(ResultSet rs) throws SQLException {
         User user = new User();
         user.setId((UUID) rs.getObject("id"));
@@ -53,51 +54,15 @@ public class UserRepository {
         user.setLosses(rs.getInt("losses"));
         return user;
     }
-    /*
-    public UserDTO findByUsername(String username) {
-        try (PreparedStatement preparedStatement =
-                     this.unitOfWork.prepareStatement("""
-                    select * from person
-                    where username = ?
-                """))
-        {
-            //1 steht für das Fragezeichen(das Statement kann ja nach
-            //mehreren Parametern abfragen: z.B. where region = ? and country = ?
-            //preparedStatement.setString(1, "Europe");
-            preparedStatement.setString(1, username);
-
-            //preparedStatement.setDouble(2, 5.0);
-
-            ResultSet resultSet = preparedStatement.executeQuery();
-
-            UserDTO user = null;
-            while(resultSet.next())
-            {
-                user = new UserDTO(
-                        resultSet.getString(4),
-                        resultSet.getString(5),
-                        resultSet.getString(6));
-            }
-            return user;
-        } catch (SQLException e) {
-            throw new DataAccessException("Select nicht erfolgreich", e);
-        }
-    }
-    */
 
     public User findUserByUsername(String username) {
         try (PreparedStatement preparedStatement =
                      this.unitOfWork.prepareStatement("""
-                    select * from person
-                    where username = ?
+                    SELECT * FROM person
+                    WHERE username = ?
                 """))
         {
-            //1 steht für das Fragezeichen(das Statement kann ja nach
-            //mehreren Parametern abfragen: z.B. where region = ? and country = ?
-            //preparedStatement.setString(1, "Europe");
             preparedStatement.setString(1, username);
-
-            //preparedStatement.setDouble(2, 5.0);
 
             ResultSet resultSet = preparedStatement.executeQuery();
             /*
@@ -111,7 +76,6 @@ public class UserRepository {
                         resultSet.getString(6));
             }
             return user;
-
              */
             if(resultSet.next()) {
                 return mapResultSetToUser(resultSet);
@@ -125,8 +89,7 @@ public class UserRepository {
     public Collection<User> findAllUsers() {
         try (PreparedStatement preparedStatement =
                      this.unitOfWork.prepareStatement("""
-                    select * from person
-                    
+                    SELECT * FROM person
                 """))
         {
             //1 steht für das Fragezeichen(das Statement kann ja nach
@@ -137,18 +100,7 @@ public class UserRepository {
 
             ResultSet resultSet = preparedStatement.executeQuery();
             Collection<User> userRows = new ArrayList<>();
-            /*
-            while(resultSet.next())
-            {
-                User user = new User(
-                        resultSet.getString(2),
-                        resultSet.getString(6),
-                        resultSet.getString(7),
-                        resultSet.getString(8));
-                userRows.add(user);
-            }
 
-             */
             while(resultSet.next()) {
                 userRows.add(mapResultSetToUser(resultSet));
             }
@@ -226,8 +178,7 @@ public class UserRepository {
     }
 
     public User updateUser(User object) {
-        // Wir machen hier ein Update nach username. Falls es den Eintrag nicht gibt,
-        // soll entweder nichts passieren oder null zurückgegeben werden.
+
         try (PreparedStatement preparedStatement =
                      this.unitOfWork.prepareStatement("""
                 UPDATE person
@@ -250,18 +201,7 @@ public class UserRepository {
 
             ResultSet rs = preparedStatement.executeQuery();
 
-            // Wenn das Update erfolgreich war, sollte ein Datensatz zurückkommen.
             if (rs.next()) {
-                // Aktualisiertes Objekt auslesen (zurückgeben)
-                /*
-                User updatedUser = new User(
-                        rs.getString("username"),
-                        rs.getString("name"),
-                        rs.getString("bio"),
-                        rs.getString("image")
-                );
-
-                 */
                 return mapResultSetToUser(rs);
             } else {
                 // Keine Zeilen gefunden -> kein Update durchgeführt

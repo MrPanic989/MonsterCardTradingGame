@@ -232,27 +232,8 @@ public class UserController extends Controller {
             );
         }
     }
+
     // POST /users
-    /*
-    Man könnte auch die Funktion benutzen, ich möchte es lieber zuerst mit den gegebenen
-    Funktionalitäten versuchen
-    public boolean userExists(String username) {
-        try (PreparedStatement ps = unitOfWork.prepareStatement(
-                "SELECT COUNT(*) FROM users WHERE username = ?"
-        )) {
-            ps.setString(1, username);
-            try (ResultSet rs = ps.executeQuery()) {
-                if (rs.next()) {
-                    int count = rs.getInt(1);
-                    return count > 0;
-                }
-            }
-        } catch (SQLException e) {
-            throw new DataAccessException("User existence check failed", e);
-        }
-        return false;
-    }
-    */
     public Response registerUser(Request request) {
         UnitOfWork unitOfWork = new UnitOfWork();
         try (unitOfWork){
